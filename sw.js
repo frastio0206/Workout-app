@@ -3,7 +3,7 @@ const URLS = [
   './',
   './index.html',
   './manifest.json',
-  './icons/icon-192.png',
+  './icons/192.jpg',
   './icons/icon-512.png',
   'https://cdnjs.cloudflare.com/ajax/libs/hammer.js/2.0.8/hammer.min.js',
   'https://cdn.jsdelivr.net/npm/idb@8/build/umd.js'
