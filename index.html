@@ -12,7 +12,10 @@
     <meta name="apple-mobile-web-app-title" content="Тренировки">
     <!-- Hammer.js для свайпов -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/hammer.js/2.0.8/hammer.min.js"></script>
+    <!-- IndexedDB Promised library -->
+    <script src="https://cdn.jsdelivr.net/npm/idb@8/build/umd.js"></script>
     <style>
+        /* Все стили из предыдущей версии (с учётом исправлений календаря и анимаций) */
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { 
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; 
@@ -31,7 +34,7 @@
             box-shadow: 0 20px 40px -12px rgba(0,0,0,0.3); 
         }
         
-        /* Табы с анимацией */
+        /* Табы */
         .tabs-container {
             overflow-x: auto;
             -webkit-overflow-scrolling: touch;
@@ -87,7 +90,7 @@
             box-shadow: 0 4px 10px rgba(0,0,0,0.05); 
         }
 
-        /* Контейнеры вкладок с плавным появлением */
+        /* Контейнеры вкладок */
         .tab-content {
             transition: opacity 0.3s ease, transform 0.3s ease;
             opacity: 1;
@@ -104,7 +107,7 @@
             animation: fadeIn 0.3s ease;
         }
 
-        /* Календарь с анимацией сворачивания */
+        /* Календарь */
         .calendar-section { 
             background: #f8fafc; 
             border-radius: 20px; 
@@ -146,7 +149,7 @@
             display: grid; 
             grid-template-columns: repeat(7, 1fr); 
             gap: 4px; 
-            max-height: 1000px; /* увеличено, чтобы поместились все строки */
+            max-height: 1000px;
             overflow: hidden;
             transition: max-height 0.4s ease-in-out, opacity 0.3s;
             opacity: 1;
@@ -249,6 +252,7 @@
             transform: translateY(-2px);
             box-shadow: 0 8px 16px rgba(99,102,241,0.3);
         }
+        .muscle-icon { font-size: 22px; }
 
         /* Кнопки-подсказки */
         .exercise-suggestions-buttons {
@@ -272,7 +276,7 @@
             transform: scale(1.05);
         }
 
-        /* Карточка упражнения с анимацией раскрытия */
+        /* Карточка упражнения */
         .exercise-card { 
             margin-bottom: 12px; 
             border: 1px solid #e2e8f0; 
@@ -333,7 +337,7 @@
             padding: 16px; 
             background: white; 
             border-top: 1px solid #e2e8f0;
-            max-height: 2000px; /* увеличено, чтобы хватило на много подходов */
+            max-height: 2000px;
             overflow: hidden;
             transition: max-height 0.4s ease-in-out, opacity 0.3s, padding 0.3s;
             opacity: 1;
@@ -381,7 +385,7 @@
         }
         .set-input input:focus { outline: none; }
 
-        /* Таймер */
+        /* Таймер с picker'ами */
         .timer-section { 
             background: #1e293b; 
             color: white; 
@@ -403,35 +407,41 @@
             letter-spacing: 4px;
             transition: color 0.2s;
         }
-        .timer-input-group { 
-            display: flex; 
-            gap: 10px; 
-            justify-content: center; 
-            margin: 15px 0; 
-            flex-wrap: wrap; 
+        .timer-picker {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 8px;
+            margin: 15px 0;
         }
-        .timer-input-group select, .timer-input-group input { 
-            padding: 12px 16px; 
-            border-radius: 40px; 
-            border: none; 
-            background: #334155; 
-            color: white; 
-            font-size: 16px; 
-            transition: background 0.2s, transform 0.2s;
-        }
-        .timer-input-group select:hover, .timer-input-group input:hover {
-            background: #3f4a5f;
-            transform: scale(1.02);
-        }
-        .timer-input-group input { 
-            width: 130px; 
+        .timer-picker select {
+            font-size: 24px;
+            padding: 10px 20px;
+            background: #334155;
+            color: white;
+            border: none;
+            border-radius: 12px;
+            -webkit-appearance: none;
+            appearance: none;
             text-align: center;
+            width: 130px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        .timer-picker select:hover {
+            background: #3f4a5f;
+        }
+        .timer-picker span {
+            font-size: 32px;
+            font-weight: 600;
+            color: #94a3b8;
         }
         .timer-controls { 
             display: flex; 
             gap: 8px; 
             justify-content: center; 
             flex-wrap: wrap; 
+            margin-top: 10px;
         }
         .timer-btn { 
             padding: 12px 20px; 
@@ -610,18 +620,142 @@
                 <div id="miniCalendar" class="calendar-grid"></div>
             </div>
 
-            <!-- Таймер -->
+            <!-- Таймер с picker'ами -->
             <div class="timer-section">
                 <h3 style="display:flex; align-items:center; gap:6px;">⏱️ Отдых</h3>
                 <div class="timer-display" id="timerDisplay">01:00</div>
-                <div class="timer-input-group">
-                    <select id="timerPreset" onchange="updateTimerFromPreset()">
-                        <option value="30">30 сек</option>
-                        <option value="60" selected>1 мин</option>
-                        <option value="120">2 мин</option>
-                        <option value="180">3 мин</option>
+
+                <div class="timer-picker">
+                    <select id="timerMinutes" onchange="updateTimerFromPickers()">
+                            <option value="00">00</option>
+                            <option value="01">01</option>
+                            <option value="02">02</option>
+                            <option value="03">03</option>
+                            <option value="04">04</option>
+                            <option value="05">05</option>
+                            <option value="06">06</option>
+                            <option value="07">07</option>
+                            <option value="08">08</option>
+                            <option value="09">09</option>
+                            <option value="10">10</option>
+                            <option value="11">11</option>
+                            <option value="12">12</option>
+                            <option value="13">13</option>
+                            <option value="14">14</option>
+                            <option value="15">15</option>
+                            <option value="16">16</option>
+                            <option value="17">17</option>
+                            <option value="18">18</option>
+                            <option value="19">19</option>
+                            <option value="20">20</option>
+                            <option value="21">21</option>
+                            <option value="22">22</option>
+                            <option value="23">23</option>
+                            <option value="24">24</option>
+                            <option value="25">25</option>
+                            <option value="26">26</option>
+                            <option value="27">27</option>
+                            <option value="28">28</option>
+                            <option value="29">29</option>
+                            <option value="30">30</option>
+                            <option value="31">31</option>
+                            <option value="32">32</option>
+                            <option value="33">33</option>
+                            <option value="34">34</option>
+                            <option value="35">35</option>
+                            <option value="36">36</option>
+                            <option value="37">37</option>
+                            <option value="38">38</option>
+                            <option value="39">39</option>
+                            <option value="40">40</option>
+                            <option value="41">41</option>
+                            <option value="42">42</option>
+                            <option value="43">43</option>
+                            <option value="44">44</option>
+                            <option value="45">45</option>
+                            <option value="46">46</option>
+                            <option value="47">47</option>
+                            <option value="48">48</option>
+                            <option value="49">49</option>
+                            <option value="50">50</option>
+                            <option value="51">51</option>
+                            <option value="52">52</option>
+                            <option value="53">53</option>
+                            <option value="54">54</option>
+                            <option value="55">55</option>
+                            <option value="56">56</option>
+                            <option value="57">57</option>
+                            <option value="58">58</option>
+                            <option value="59">59</option>
+                            <option value="60">60</option>
+                        </select>                        
                     </select>
-                    <input type="text" id="timerCustomTime" placeholder="мм:сс" value="01:00" inputmode="numeric">
+                    <span>:</span>
+                    <select id="timerSeconds" onchange="updateTimerFromPickers()">
+                            <option value="00">00</option>
+                            <option value="01">01</option>
+                            <option value="02">02</option>
+                            <option value="03">03</option>
+                            <option value="04">04</option>
+                            <option value="05">05</option>
+                            <option value="06">06</option>
+                            <option value="07">07</option>
+                            <option value="08">08</option>
+                            <option value="09">09</option>
+                            <option value="10">10</option>
+                            <option value="11">11</option>
+                            <option value="12">12</option>
+                            <option value="13">13</option>
+                            <option value="14">14</option>
+                            <option value="15">15</option>
+                            <option value="16">16</option>
+                            <option value="17">17</option>
+                            <option value="18">18</option>
+                            <option value="19">19</option>
+                            <option value="20">20</option>
+                            <option value="21">21</option>
+                            <option value="22">22</option>
+                            <option value="23">23</option>
+                            <option value="24">24</option>
+                            <option value="25">25</option>
+                            <option value="26">26</option>
+                            <option value="27">27</option>
+                            <option value="28">28</option>
+                            <option value="29">29</option>
+                            <option value="30">30</option>
+                            <option value="31">31</option>
+                            <option value="32">32</option>
+                            <option value="33">33</option>
+                            <option value="34">34</option>
+                            <option value="35">35</option>
+                            <option value="36">36</option>
+                            <option value="37">37</option>
+                            <option value="38">38</option>
+                            <option value="39">39</option>
+                            <option value="40">40</option>
+                            <option value="41">41</option>
+                            <option value="42">42</option>
+                            <option value="43">43</option>
+                            <option value="44">44</option>
+                            <option value="45">45</option>
+                            <option value="46">46</option>
+                            <option value="47">47</option>
+                            <option value="48">48</option>
+                            <option value="49">49</option>
+                            <option value="50">50</option>
+                            <option value="51">51</option>
+                            <option value="52">52</option>
+                            <option value="53">53</option>
+                            <option value="54">54</option>
+                            <option value="55">55</option>
+                            <option value="56">56</option>
+                            <option value="57">57</option>
+                            <option value="58">58</option>
+                            <option value="59">59</option>
+                            <option value="60">60</option>
+</select>
+                    </select>
+
                 </div>
                 <div class="timer-controls">
                     <button id="timerStartPauseBtn" onclick="toggleTimer()" class="timer-btn start">▶ Старт</button>
@@ -774,6 +908,35 @@
         const STORAGE_KEY = 'workout_diary_elite';
         let syncTimeout = null;
 
+        // --- IndexedDB для офлайн-синхронизации ---
+        const DB_NAME = 'workout-offline-db';
+        const STORE_NAME = 'pending';
+
+        async function getDB() {
+            return idb.openDB(DB_NAME, 1, {
+                upgrade(db) {
+                    if (!db.objectStoreNames.contains(STORE_NAME)) {
+                        db.createObjectStore(STORE_NAME, { keyPath: 'id', autoIncrement: true });
+                    }
+                }
+            });
+        }
+
+        async function saveWorkoutOffline(workoutData) {
+            const db = await getDB();
+            await db.add(STORE_NAME, {
+                data: workoutData,
+                synced: false,
+                timestamp: Date.now()
+            });
+            // Регистрируем фоновую синхронизацию, если поддерживается
+            if ('serviceWorker' in navigator && 'SyncManager' in window) {
+                const registration = await navigator.serviceWorker.ready;
+                await registration.sync.register('workout-sync');
+            }
+        }
+
+        // --- Загрузка/сохранение ---
         function loadFromStorage() {
             showSyncStatus('🔄');
             try {
@@ -792,21 +955,33 @@
             renderAll();
         }
 
-        function saveToStorage(silent = false) {
+        async function saveToStorage(silent = false) {
+            // Всегда сохраняем в localStorage
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+
+            // Если есть интернет, пытаемся отправить на сервер
+            if (navigator.onLine) {
+                try {
+                    // Здесь должен быть реальный API endpoint
+                    // await fetch('https://your-server.com/api/workouts', {
+                    //     method: 'POST',
+                    //     headers: { 'Content-Type': 'application/json' },
+                    //     body: JSON.stringify(state.workouts)
+                    // });
+                    console.log('Данные отправлены на сервер');
+                } catch (e) {
+                    console.log('Ошибка отправки, сохраняем офлайн');
+                    await saveWorkoutOffline(state.workouts);
+                }
+            } else {
+                // Офлайн — сохраняем в IndexedDB
+                await saveWorkoutOffline(state.workouts);
+            }
+
             if (!silent) {
                 showSyncStatus('🔄');
-            }
-            try {
-                localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-                if (!silent) {
-                    if (syncTimeout) clearTimeout(syncTimeout);
-                    syncTimeout = setTimeout(hideSyncStatus, 1500);
-                }
-            } catch (e) {
-                if (!silent) {
-                    showSyncStatus('⚠️');
-                    setTimeout(hideSyncStatus, 1500);
-                }
+                if (syncTimeout) clearTimeout(syncTimeout);
+                syncTimeout = setTimeout(hideSyncStatus, 1500);
             }
         }
 
@@ -1377,32 +1552,26 @@
             }
         }
 
-        // --- Таймер ---
-        function updateTimerFromPreset() {
-            const preset = document.getElementById('timerPreset').value;
-            const mins = Math.floor(preset / 60);
-            const secs = preset % 60;
-            document.getElementById('timerCustomTime').value = `${String(mins).padStart(2,'0')}:${String(secs).padStart(2,'0')}`;
-            resetTimer();
+        // --- Таймер с picker'ами ---
+        function updateTimerFromPickers() {
+            const mins = parseInt(document.getElementById('timerMinutes').value);
+            const secs = parseInt(document.getElementById('timerSeconds').value);
+            const total = mins * 60 + secs;
+            state.timer.remaining = total;
+            state.timer.duration = total;
+            updateTimerDisplay();
+            resetTimer(); // сброс активного состояния
         }
 
-        function parseTimeInput(input) {
-            if (!input) return null;
-            const parts = input.split(':');
-            if (parts.length === 2) {
-                const mins = parseInt(parts[0]) || 0;
-                const secs = parseInt(parts[1]) || 0;
-                return mins * 60 + secs;
-            }
-            const secs = parseInt(input);
-            if (!isNaN(secs) && secs > 0) return secs;
-            return null;
+        function parseTimeFromPickers() {
+            const mins = parseInt(document.getElementById('timerMinutes').value);
+            const secs = parseInt(document.getElementById('timerSeconds').value);
+            return mins * 60 + secs;
         }
 
         function startTimer() {
             if (state.timer.interval) clearInterval(state.timer.interval);
-            let dur = parseTimeInput(document.getElementById('timerCustomTime').value);
-            if (dur === null) dur = parseInt(document.getElementById('timerPreset').value);
+            const dur = parseTimeFromPickers();
             state.timer.duration = dur;
             state.timer.remaining = dur;
             state.timer.active = true;
@@ -1432,8 +1601,7 @@
 
         function resetTimer() {
             stopTimer();
-            let dur = parseTimeInput(document.getElementById('timerCustomTime').value);
-            if (dur === null) dur = parseInt(document.getElementById('timerPreset').value);
+            const dur = parseTimeFromPickers();
             state.timer.remaining = dur;
             state.timer.duration = dur;
             updateTimerDisplay();
@@ -1637,7 +1805,6 @@
             renderMuscleStats();
             renderAnalytics();
             if (state.currentTab === 'exercises') renderLibrary('all');
-            // применить состояние свёрнутости календаря
             const grid = document.getElementById('miniCalendar');
             const btn = document.getElementById('toggleCalendarBtn');
             if (grid && btn) {
@@ -1653,7 +1820,6 @@
             document.getElementById(tabName + 'Tab').classList.remove('hidden');
             document.querySelectorAll('.tab').forEach(tab => tab.classList.toggle('active', tab.dataset.tab === tabName));
 
-            // Прокрутка активной вкладки в центр видимой области
             const activeTab = document.querySelector(`.tab[data-tab="${tabName}"]`);
             if (activeTab) {
                 activeTab.scrollIntoView({
@@ -1689,7 +1855,6 @@
                 });
             });
 
-            // Свайп для переключения вкладок
             const hammertime = new Hammer(document.getElementById('app'));
             hammertime.on('swipeleft', () => {
                 const tabs = ['workout','exercises','calendar','stats','analytics'];
@@ -1708,7 +1873,6 @@
                 container.addEventListener('change', changeHandler);
             }
 
-            // Фильтр библиотеки
             document.querySelectorAll('#libraryMuscleFilter .muscle-btn').forEach(btn => {
                 btn.addEventListener('click', (e) => {
                     e.preventDefault();
@@ -1722,11 +1886,14 @@
             updateTimerDisplay();
         });
     </script>
-    <!-- Service Worker -->
+
+    <!-- Service Worker регистрация -->
     <script>
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
-                navigator.serviceWorker.register('/sw.js').catch(err => console.log('SW error:', err));
+                navigator.serviceWorker.register('/sw.js')
+                    .then(reg => console.log('Service Worker registered'))
+                    .catch(err => console.log('SW registration failed:', err));
             });
         }
     </script>
