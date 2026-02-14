@@ -95,11 +95,7 @@
         }
         .tab-content.hidden {
             display: none;
-            /* для анимации мы не используем display, но в нашем случае скрываем через display,
-               поэтому анимация применяется только при переключении через JS.
-               Для плавности мы будем менять классы с задержкой */
         }
-        /* Альтернативно можно использовать анимацию при появлении */
         @keyframes fadeIn {
             from { opacity: 0; transform: translateX(10px); }
             to { opacity: 1; transform: translateX(0); }
@@ -150,7 +146,7 @@
             display: grid; 
             grid-template-columns: repeat(7, 1fr); 
             gap: 4px; 
-            max-height: 1000px;
+            max-height: 1000px; /* увеличено, чтобы поместились все строки */
             overflow: hidden;
             transition: max-height 0.4s ease-in-out, opacity 0.3s;
             opacity: 1;
@@ -337,7 +333,7 @@
             padding: 16px; 
             background: white; 
             border-top: 1px solid #e2e8f0;
-            max-height: 500px;
+            max-height: 2000px; /* увеличено, чтобы хватило на много подходов */
             overflow: hidden;
             transition: max-height 0.4s ease-in-out, opacity 0.3s, padding 0.3s;
             opacity: 1;
@@ -1656,6 +1652,17 @@
             document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
             document.getElementById(tabName + 'Tab').classList.remove('hidden');
             document.querySelectorAll('.tab').forEach(tab => tab.classList.toggle('active', tab.dataset.tab === tabName));
+
+            // Прокрутка активной вкладки в центр видимой области
+            const activeTab = document.querySelector(`.tab[data-tab="${tabName}"]`);
+            if (activeTab) {
+                activeTab.scrollIntoView({
+                    behavior: 'smooth',
+                    inline: 'center',
+                    block: 'nearest'
+                });
+            }
+
             if (tabName === 'stats') {
                 renderMuscleStats();
                 renderPersonalBests();
