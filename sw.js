@@ -1,3 +1,5 @@
+importScripts('https://cdn.jsdelivr.net/npm/idb@8/build/umd.js');
+
 const CACHE_NAME = 'workout-cache-v2';
 const URLS = [
   './',

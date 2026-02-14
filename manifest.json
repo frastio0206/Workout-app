@@ -1,6 +1,6 @@
 {
-  "name": "Дневник тренировок ELITE",
-  "short_name": "Тренировки",
+  "name": "Hard days",
+  "short_name": "Hard days",
   "description": "Персональный дневник тренировок с офлайн-режимом",
   "start_url": "./",
   "scope": "./",
